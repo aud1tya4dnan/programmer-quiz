@@ -2,7 +2,7 @@
 
 A daily programming and Linux configuration quiz app to sharpen your developer skills — one question at a time.
 
-Built with **Vite + vanilla JS**, styled in **neobrutalism**, powered by **Gemini AI** for question generation and essay grading.
+Built with **Vite + vanilla JS**, styled in **neobrutalism**, powered by your choice of **AI provider** for question generation and essay grading.
 
 ![Quiz with questions loaded](docs/images/02-quiz-loaded.png)
 
@@ -11,6 +11,7 @@ Built with **Vite + vanilla JS**, styled in **neobrutalism**, powered by **Gemin
 ## ✨ Features
 
 - **AI-generated questions** — programming concepts, algorithms, Linux commands, shell scripting & more
+- **Multiple AI providers** — Google Gemini, OpenAI, Anthropic, OpenRouter, or any custom/self-hosted endpoint
 - **Multiple-choice** — radio button selection with instant correct/incorrect feedback
 - **Essay answers** — free-text input with AI-powered grading and constructive feedback
 - **Report issues** — flag wrong answers, unclear questions, or AI hallucinations
@@ -38,9 +39,10 @@ npm run dev
 
 ### Enable AI Features (optional)
 
-1. Get a free API key from [Google AI Studio](https://aistudio.google.com/apikey)
-2. Open **Settings** ⚙️ in the app
-3. Paste your Gemini API key and save
+1. Open **Settings** ⚙️ in the app
+2. Select your AI **provider** (Gemini, OpenAI, Anthropic, OpenRouter, or Custom)
+3. Paste your **API key** and choose a **model**
+4. For self-hosted models (Ollama, LM Studio), select **Custom / Self-Hosted** and enter your base URL
 
 Without an API key, the app uses built-in fallback questions.
 
@@ -70,7 +72,10 @@ Select a category (**All**, **Programming**, or **Linux**) and click **"Generate
 ### 4. Configure Settings
 
 Click **Settings** ⚙️ to manage:
-- **Gemini API Key** — required for AI question generation and essay grading
+- **AI Provider** — choose from Google Gemini, OpenAI, Anthropic, OpenRouter, or Custom / Self-Hosted
+- **API Key** — required for AI features (each provider links to where to get a key)
+- **Model** — pick from preset models or enter a custom model name
+- **Base URL** — for custom/self-hosted endpoints (Ollama, LM Studio, vLLM, etc.)
 - **Quiz Preferences** — number of questions per quiz, default category
 - **Database** — toggle between localStorage (default) and Supabase for long-term persistence
 
@@ -92,11 +97,13 @@ Click **🚩 Report Issue** on any question card to flag problems:
 
 | Setting | Location | Description |
 |---------|----------|-------------|
-| Gemini API Key | Settings → API Key | Enables AI question generation and essay grading |
+| Provider | Settings → AI Provider | Gemini, OpenAI, Anthropic, OpenRouter, or Custom |
+| API Key | Settings → API Key | Required for AI features; each provider has a keyed link |
+| Model | Settings → Model | Preset models or custom model name input |
+| Base URL | Settings → Base URL | For custom/self-hosted endpoints only |
 | Questions per quiz | Settings → Preferences | 3, 5, 8, or 10 questions |
 | Default category | Settings → Preferences | All, Programming, or Linux |
 | Storage backend | Settings → Database | localStorage (default) or Supabase |
-| Supabase URL/Key | Settings → Database | For long-term cloud persistence |
 
 ---
 
@@ -131,11 +138,16 @@ programmer-quiz/
 ## 🛠️ Tech Stack
 
 | Technology | Purpose |
-|------------|---------|
+|------------|--------|
 | Vite | Dev server & build tool |
 | Vanilla JS | No framework — lightweight & fast |
 | Poppins | Body font (Google Fonts) |
 | Monospace | Code sections & scores |
-| Gemini API | AI question generation & essay grading |
+| Gemini / OpenAI / Anthropic / OpenRouter | AI question generation & essay grading |
+| Custom / Self-Hosted | Ollama, LM Studio, vLLM, or any OpenAI-compatible API |
 | localStorage | Default client-side storage |
-| Supabase (optional) | Cloud database for persistence |
+| Supabase (optional) | Cloud PostgreSQL for persistence |
+
+## Contributing
+
+Contributions are welcome! Please open an issue or submit a pull request.
