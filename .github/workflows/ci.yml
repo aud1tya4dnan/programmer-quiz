@@ -1,0 +1,71 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  lint-and-fix:
+    name: Check Code and Auto Fix
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write # Required for git-auto-commit-action
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.head_ref }}
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install dependencies
+        run: npm install
+
+      # You can replace this with your own linter (e.g. ESLint)
+      - name: Auto Format Code
+        run: npx prettier --write "src/**/*.{js,jsx,css,html}" "index.html" || true
+
+      - name: Commit changes back to branch
+        uses: stefanzweifel/git-auto-commit-action@v5
+        with:
+          commit_message: "chore: auto format code updates"
+          commit_user_name: "github-actions[bot]"
+          commit_user_email: "github-actions[bot]@users.noreply.github.com"
+          commit_author: "github-actions[bot] <github-actions[bot]@users.noreply.github.com>"
+
+  build-and-deploy:
+    name: Build and Auto Deploy
+    needs: lint-and-fix
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Build App
+        run: npm run build
+
+      # Deploy using SSH/Rsync to your Self-Hosted Server
+      - name: Deploy to Server via SSH
+        uses: easingthemes/ssh-deploy@main
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+          ARGS: "-rlgoDzvc -i"
+          SOURCE: "dist/" # Assuming your build output is dist/
+          REMOTE_HOST: ${{ secrets.SERVER_IP }}
+          REMOTE_USER: ${{ secrets.SERVER_USER_NAME }}
+          TARGET: ${{ secrets.REMOTE_TARGET_PATH }}

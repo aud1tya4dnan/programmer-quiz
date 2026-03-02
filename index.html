@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="Daily programming and Linux configuration quiz — sharpen your skills one question at a time." />
+  <title>Daily Dev Quiz</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/src/style.css" />
+</head>
+<body>
+  <div id="app">
+    <!-- Header -->
+    <header id="header">
+      <div class="header-left">
+        <h1>⚡ Daily Dev Quiz</h1>
+        <p class="tagline">Sharpen your skills, one question at a time</p>
+      </div>
+      <div class="header-right">
+        <button id="settings-btn" class="btn btn-outline" aria-label="Settings">
+          <span class="icon">⚙️</span> Settings
+        </button>
+      </div>
+    </header>
+
+    <!-- Quiz Controls -->
+    <section id="quiz-controls">
+      <div class="controls-row">
+        <div class="category-badges">
+          <button class="badge badge-active" data-category="all">All</button>
+          <button class="badge" data-category="programming">💻 Programming</button>
+          <button class="badge" data-category="linux">🐧 Linux</button>
+        </div>
+        <button id="generate-btn" class="btn btn-primary">
+          <span class="icon">🎲</span> Generate Quiz
+        </button>
+      </div>
+    </section>
+
+    <!-- Quiz Container -->
+    <main id="quiz-container">
+      <div id="quiz-loading" class="loading-state" style="display: none;">
+        <div class="spinner"></div>
+        <p>Generating your quiz questions...</p>
+      </div>
+      <div id="quiz-empty" class="empty-state">
+        <div class="empty-icon">📝</div>
+        <h2>Ready to test your knowledge?</h2>
+        <p>Click <strong>"Generate Quiz"</strong> to get started, or configure your Gemini API key in Settings for AI-generated questions.</p>
+      </div>
+      <div id="quiz-questions" style="display: none;"></div>
+    </main>
+
+    <!-- Score Summary (hidden until quiz is submitted) -->
+    <section id="score-summary" style="display: none;">
+      <div class="score-card">
+        <h2>Quiz Complete! 🎉</h2>
+        <div class="score-details">
+          <div class="score-number"><span id="score-value">0</span>/<span id="score-total">0</span></div>
+          <p id="score-message"></p>
+        </div>
+        <button id="retry-btn" class="btn btn-primary">Generate New Quiz</button>
+      </div>
+    </section>
+
+    <!-- Settings Modal -->
+    <div id="settings-modal" class="modal" style="display: none;">
+      <div class="modal-backdrop"></div>
+      <div class="modal-content"></div>
+    </div>
+
+    <!-- Feedback Modal -->
+    <div id="feedback-modal" class="modal" style="display: none;">
+      <div class="modal-backdrop"></div>
+      <div class="modal-content"></div>
+    </div>
+  </div>
+
+  <script type="module" src="/src/main.js"></script>
+</body>
+</html>
