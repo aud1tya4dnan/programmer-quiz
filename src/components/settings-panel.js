@@ -1,9 +1,9 @@
 /**
  * Settings Panel Component
- * Manages API key, quiz preferences, and optional database configuration.
+ * Manages AI provider/model selection, API key, quiz preferences, and database configuration.
  */
 
-import { getApiKey, setApiKey, hasApiKey } from '../ai-client.js';
+import { getAIConfig, saveAIConfig, hasApiKey, PROVIDERS } from '../ai-client.js';
 
 /**
  * Render the settings panel into the modal.
@@ -11,7 +11,7 @@ import { getApiKey, setApiKey, hasApiKey } from '../ai-client.js';
  * @param {function} onClose - callback for closing the modal
  */
 export function renderSettingsPanel(container, onClose) {
-  const currentKey = getApiKey();
+  const aiConfig = getAIConfig();
   const dbConfig = JSON.parse(localStorage.getItem('db_config') || '{}');
   const quizPrefs = JSON.parse(localStorage.getItem('quiz_prefs') || '{"count":5,"category":"all"}');
 
@@ -23,22 +23,76 @@ export function renderSettingsPanel(container, onClose) {
       </div>
 
       <div class="settings-body">
-        <!-- API Key Section -->
+        <!-- AI Provider Section -->
         <section class="settings-section">
-          <h3>🔑 Gemini API Key</h3>
-          <p class="settings-desc">Required for AI-generated questions and essay checking. Get your key from <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener">Google AI Studio</a>.</p>
-          <div class="input-group">
-            <input
-              type="password"
-              id="api-key-input"
-              class="input"
-              placeholder="Enter your Gemini API key..."
-              value="${escapeAttr(currentKey)}"
-            />
-            <button class="btn btn-outline" id="toggle-key-visibility">👁️</button>
+          <h3>🤖 AI Provider</h3>
+          <p class="settings-desc">Choose your AI provider for question generation and essay grading.</p>
+
+          <!-- Provider Selection -->
+          <div class="form-row">
+            <label>Provider</label>
+            <div class="provider-grid" id="provider-grid">
+              ${Object.entries(PROVIDERS).map(([key, p]) => `
+                <label class="provider-card ${key === 'custom' ? 'provider-card-wide' : ''} ${aiConfig.provider === key ? 'provider-active' : ''}">
+                  <input type="radio" name="ai-provider" value="${key}" ${aiConfig.provider === key ? 'checked' : ''} />
+                  <span class="provider-icon">${p.icon}</span>
+                  <span class="provider-name">${p.name}</span>
+                </label>
+              `).join('')}
+            </div>
           </div>
-          <div class="api-status ${hasApiKey() ? 'status-active' : 'status-inactive'}">
-            ${hasApiKey() ? '✅ API key configured' : '⚠️ No API key — using fallback questions'}
+
+          <!-- Custom Base URL (shown only for custom provider) -->
+          <div class="form-row" id="custom-url-row" style="display: ${aiConfig.provider === 'custom' ? 'block' : 'none'};">
+            <label for="custom-base-url">Base URL</label>
+            <input
+              type="url"
+              id="custom-base-url"
+              class="input"
+              placeholder="http://localhost:11434 (Ollama) or http://localhost:1234 (LM Studio)..."
+              value="${escapeAttr(aiConfig.customBaseUrl || '')}"
+            />
+            <p class="settings-desc" style="margin-top: 0.25rem;">Any OpenAI-compatible endpoint. Will call <code>{baseUrl}/v1/chat/completions</code>.</p>
+          </div>
+
+          <!-- API Key Input -->
+          <div class="form-row">
+            <label for="api-key-input">
+              API Key
+              <a href="${escapeAttr(PROVIDERS[aiConfig.provider].apiKeyUrl || '#')}" target="_blank" rel="noopener" class="settings-link" id="api-key-link" style="display: ${PROVIDERS[aiConfig.provider].apiKeyUrl ? 'inline' : 'none'}">Get key →</a>
+            </label>
+            <div class="input-group">
+              <input
+                type="password"
+                id="api-key-input"
+                class="input"
+                placeholder="${escapeAttr(PROVIDERS[aiConfig.provider].apiKeyPlaceholder)}"
+                value="${escapeAttr(aiConfig.apiKey)}"
+              />
+              <button class="btn btn-outline" id="toggle-key-visibility">👁️</button>
+            </div>
+            <div class="api-status ${hasApiKey() ? 'status-active' : 'status-inactive'}">
+              ${hasApiKey() ? '✅ API key configured' : '⚠️ No API key — using fallback questions'}
+            </div>
+          </div>
+
+          <!-- Model Selection -->
+          <div class="form-row">
+            <label for="model-select">Model</label>
+            <div class="model-select-group">
+              <select id="model-select" class="input input-select">
+                ${renderModelOptions(aiConfig.provider, aiConfig.model)}
+                <option value="__custom__" ${!PROVIDERS[aiConfig.provider].models.includes(aiConfig.model) ? 'selected' : ''}>✏️ Custom model...</option>
+              </select>
+              <input
+                type="text"
+                id="model-custom-input"
+                class="input"
+                placeholder="Enter custom model name..."
+                value="${!PROVIDERS[aiConfig.provider].models.includes(aiConfig.model) ? escapeAttr(aiConfig.model) : ''}"
+                style="display: ${!PROVIDERS[aiConfig.provider].models.includes(aiConfig.model) ? 'block' : 'none'};"
+              />
+            </div>
           </div>
         </section>
 
@@ -98,9 +152,66 @@ export function renderSettingsPanel(container, onClose) {
     </div>
   `;
 
+  // ── Event Listeners ───────────────────────────────────────────────────────
+
+  const providerRadios = container.querySelectorAll('input[name="ai-provider"]');
+  const apiKeyInput = container.querySelector('#api-key-input');
+  const apiKeyLink = container.querySelector('#api-key-link');
+  const modelSelect = container.querySelector('#model-select');
+  const modelCustomInput = container.querySelector('#model-custom-input');
+  const providerCards = container.querySelectorAll('.provider-card');
+  const customUrlRow = container.querySelector('#custom-url-row');
+  const customBaseUrlInput = container.querySelector('#custom-base-url');
+
+  // Provider switch
+  providerRadios.forEach((radio) => {
+    radio.addEventListener('change', () => {
+      const provider = radio.value;
+      const pDef = PROVIDERS[provider];
+
+      // Update active provider card
+      providerCards.forEach((c) => c.classList.remove('provider-active'));
+      radio.closest('.provider-card').classList.add('provider-active');
+
+      // Show/hide base URL row for custom provider
+      customUrlRow.style.display = provider === 'custom' ? 'block' : 'none';
+
+      // Update API key placeholder and link
+      apiKeyInput.placeholder = pDef.apiKeyPlaceholder;
+      if (pDef.apiKeyUrl) {
+        apiKeyLink.href = pDef.apiKeyUrl;
+        apiKeyLink.style.display = 'inline';
+      } else {
+        apiKeyLink.style.display = 'none';
+      }
+
+      // Update model dropdown
+      modelSelect.innerHTML = renderModelOptions(provider, pDef.defaultModel)
+        + '<option value="__custom__">✏️ Custom model...</option>';
+      // For custom provider, always show the custom model input pre-focused
+      if (provider === 'custom') {
+        modelSelect.value = '__custom__';
+        modelCustomInput.style.display = 'block';
+      } else {
+        modelCustomInput.style.display = 'none';
+        modelCustomInput.value = '';
+      }
+    });
+  });
+
+  // Model dropdown — show custom input when "Custom model..." is selected
+  modelSelect.addEventListener('change', () => {
+    if (modelSelect.value === '__custom__') {
+      modelCustomInput.style.display = 'block';
+      modelCustomInput.focus();
+    } else {
+      modelCustomInput.style.display = 'none';
+      modelCustomInput.value = '';
+    }
+  });
+
   // Toggle password visibility
   const toggleBtn = container.querySelector('#toggle-key-visibility');
-  const apiKeyInput = container.querySelector('#api-key-input');
   toggleBtn.addEventListener('click', () => {
     apiKeyInput.type = apiKeyInput.type === 'password' ? 'text' : 'password';
     toggleBtn.textContent = apiKeyInput.type === 'password' ? '👁️' : '🙈';
@@ -115,10 +226,20 @@ export function renderSettingsPanel(container, onClose) {
     });
   });
 
-  // Save
+  // Save all settings
   container.querySelector('#settings-save').addEventListener('click', () => {
-    // Save API key
-    setApiKey(apiKeyInput.value);
+    // Save AI config
+    const selectedProvider = container.querySelector('input[name="ai-provider"]:checked').value;
+    const selectedModel = modelSelect.value === '__custom__'
+      ? modelCustomInput.value.trim()
+      : modelSelect.value;
+
+    saveAIConfig({
+      provider: selectedProvider,
+      apiKey: apiKeyInput.value.trim(),
+      model: selectedModel || PROVIDERS[selectedProvider].defaultModel || '',
+      customBaseUrl: customBaseUrlInput ? customBaseUrlInput.value.trim() : '',
+    });
 
     // Save quiz prefs
     localStorage.setItem('quiz_prefs', JSON.stringify({
@@ -141,6 +262,14 @@ export function renderSettingsPanel(container, onClose) {
   // Cancel & close
   container.querySelector('#settings-cancel').addEventListener('click', onClose);
   container.querySelector('#settings-close').addEventListener('click', onClose);
+}
+
+// ── Helpers ─────────────────────────────────────────────────────────────────
+
+function renderModelOptions(provider, selectedModel) {
+  return PROVIDERS[provider].models
+    .map((m) => `<option value="${m}" ${m === selectedModel ? 'selected' : ''}>${m}</option>`)
+    .join('');
 }
 
 function escapeAttr(str) {
